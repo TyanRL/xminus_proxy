@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 3000;
 // Проксирование запросов к сайту x-minus.pro
 app.get("/proxy/*", async (req, res) => {
   try {
-    const url = `https://x-minus.pro/`;
+    const url = `https://x-minus.pro/${req.params[0]}${req.url.split("?")[1] ? `?${req.url.split("?")[1]}` : ""}`;
     const response = await axios.get(url, {
       headers: {
         "User-Agent": req.headers["user-agent"] || "Mozilla/5.0 (compatible; Proxy/1.0)",
