@@ -1,35 +1,38 @@
 # api/proxy.py
 
-from flask import Flask, request, Response
-from http.server import BaseHTTPRequestHandler
-import requests
+import logging
+from fastapi import FastAPI, Request, Response
+import httpx
 
-app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
+
+app = FastAPI()
 
 TARGET_URL = 'https://x-minus.pro'
 
-@app.route('/', defaults={'path': ''}, methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
-@app.route('/<path:path>', methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'])
-def proxy(path):
-    url = f"{TARGET_URL}/{path}"
-    headers = {key: value for key, value in request.headers if key.lower() != 'host'}
+@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
+async def proxy(request: Request, path: str):
+    logging.debug(f"Proxy called with path: {path}")
+    logging.debug(f"Request method: {request.method}")
+    logging.debug(f"Request headers: {request.headers}")
 
-    resp = requests.request(
-        method=request.method,
-        url=url,
-        headers=headers,
-        params=request.args,
-        data=request.get_data(),
-        cookies=request.cookies,
-        allow_redirects=False
-    )
+    client = httpx.AsyncClient()
 
-    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-    headers = [(name, value) for name, value in resp.raw.headers.items() if name.lower() not in excluded_headers]
+    try:
+        resp = await client.request(
+            method=request.method,
+            url=f"{TARGET_URL}/{path}",
+            headers={key: value for key, value in request.headers.items() if key.lower() != 'host'},
+            params=request.query_params,
+            content=await request.body(),
+            cookies=request.cookies
+        )
+    finally:
+        await client.aclose()
 
-    response = Response(resp.content, resp.status_code, headers)
-    return response
+    headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in ['content-encoding', 'content-length', 'transfer-encoding', 'connection']]
+    return Response(content=resp.content, status_code=resp.status_code, headers=dict(headers))
 
-# Vercel ожидает функцию `handler` с определённой сигнатурой
-def handler(event, context):
-    return app(event, context)
+def handler(request, *args):
+    logging.debug(f"Handler called with request: {request}")
+    return app
