@@ -10,7 +10,6 @@ app.get("/*", async (req, res) => {
   try {
     console.log(`Proxying request to: ${url}`);
 
-    // Настройка Puppeteer для использования Chrome-AWS-Lambda
     const browser = await puppeteer.launch({
       args: chrome.args,
       executablePath: await chrome.executablePath,
@@ -18,15 +17,9 @@ app.get("/*", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-    );
-
-    // Переход на целевой URL
     await page.goto(url, { waitUntil: "domcontentloaded" });
-    const content = await page.content();
 
-    // Возвращаем содержимое страницы
+    const content = await page.content();
     res.send(content);
 
     await browser.close();
@@ -41,5 +34,3 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
-
-//sdds
