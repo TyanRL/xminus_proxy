@@ -1,38 +1,31 @@
-# api/proxy.py
+import json
+import requests
 
-import logging
-from fastapi import FastAPI, Request, Response
-import httpx
+def handler(event, context):
+    # Извлекаем метод, заголовки и тело из события
+    method = event.get('httpMethod', 'GET')
+    headers = event.get('headers', {})
+    body = event.get('body', '')
+    path = event.get('path', '/')
+    queryStringParameters = event.get('queryStringParameters', {})
 
-logging.basicConfig(level=logging.DEBUG)
+    # Строим целевой URL
+    TARGET_URL = 'https://x-minus.pro'
+    url = f"{TARGET_URL}{path}"
 
-app = FastAPI()
+    # Отправляем запрос на целевой URL
+    resp = requests.request(
+        method=method,
+        url=url,
+        headers=headers,
+        params=queryStringParameters,
+        data=body,
+        allow_redirects=False
+    )
 
-TARGET_URL = 'https://x-minus.pro'
-
-@app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"])
-async def proxy(request: Request, path: str):
-    logging.debug(f"Proxy called with path: {path}")
-    logging.debug(f"Request method: {request.method}")
-    logging.debug(f"Request headers: {request.headers}")
-
-    client = httpx.AsyncClient()
-
-    try:
-        resp = await client.request(
-            method=request.method,
-            url=f"{TARGET_URL}/{path}",
-            headers={key: value for key, value in request.headers.items() if key.lower() != 'host'},
-            params=request.query_params,
-            content=await request.body(),
-            cookies=request.cookies
-        )
-    finally:
-        await client.aclose()
-
-    headers = [(k, v) for k, v in resp.headers.items() if k.lower() not in ['content-encoding', 'content-length', 'transfer-encoding', 'connection']]
-    return Response(content=resp.content, status_code=resp.status_code, headers=dict(headers))
-
-def handler(request, *args):
-    logging.debug(f"Handler called with request: {request}")
-    return app
+    # Формируем ответ
+    return {
+        'statusCode': resp.status_code,
+        'headers': dict(resp.headers),
+        'body': resp.text
+    }
