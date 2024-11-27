@@ -29,5 +29,5 @@ def proxy(path):
     response = Response(resp.content, resp.status_code, headers)
     return response
 
-def handler(event, context):
-    return app(event, context)
+def handler(request):
+    return app.full_dispatch_request()
