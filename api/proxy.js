@@ -6,20 +6,19 @@ const PORT = process.env.PORT || 3000;
 
 // Проксирование запросов к сайту x-minus.pro
 app.get("/proxy/*", async (req, res) => {
-  try {
-    const url = `https://x-minus.pro/${req.params[0]}${req.url.split("?")[1] ? `?${req.url.split("?")[1]}` : ""}`;
-    const response = await axios.get(url, {
-      headers: {
-        "User-Agent": req.headers["user-agent"] || "Mozilla/5.0 (compatible; Proxy/1.0)",
-      },
-    });
-    res.set(response.headers);
-    res.status(response.status).send(response.data);
-  } catch (error) {
-    console.error("Error during proxying:", error.message);
-    res.status(500).send("Error while proxying the request.");
-  }
-});
+    console.log("Incoming request:", req.originalUrl); // Лог запроса
+    try {
+      const url = `https://x-minus.pro/${req.params[0]}${req.url.split("?")[1] ? `?${req.url.split("?")[1]}` : ""}`;
+      console.log("Proxied URL:", url); // Лог целевого URL
+      const response = await axios.get(url);
+      res.set(response.headers);
+      res.status(response.status).send(response.data);
+    } catch (error) {
+      console.error("Error:", error.message); // Лог ошибки
+      res.status(500).send("Error while proxying the request.");
+    }
+  });
+  
 
 // Обработка корневого запроса
 app.get("/", (req, res) => {
