@@ -29,5 +29,6 @@ def proxy(path):
     response = Response(resp.content, resp.status_code, headers)
     return response
 
-def handler(request):
-    return app.full_dispatch_request()
+# Vercel ожидает функцию `handler` с определённой сигнатурой
+def handler(event, context):
+    return app(event, context)
