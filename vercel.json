@@ -7,10 +7,10 @@
       }
     ],
     "routes": [
-    {
-        "src": "/proxy/(.*)",
+      {
+        "src": "/(.*)",
         "dest": "api/proxy.js"
-    }
-]
+      }
+    ]
   }
   
