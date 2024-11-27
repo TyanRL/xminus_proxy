@@ -1,32 +1,31 @@
-const express = require("express");
-const axios = require("axios");
+const puppeteer = require("puppeteer");
 
+const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get("/*", async (req, res) => {
+  const url = `https://x-minus.pro/${req.params[0] || ""}`;
   try {
-    const path = req.params[0] || "";
-    const url = `https://x-minus.pro/${path}${req.url.includes("?") ? `?${req.url.split("?")[1]}` : ""}`;
-    console.log(`Proxying request to: ${url}`);
+    console.log(`Opening URL in Puppeteer: ${url}`);
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
 
-    // Отправляем запрос с необходимыми заголовками
-    const response = await axios.get(url, {
-      headers: {
-        "User-Agent": req.headers["user-agent"] || "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36",
-        "Referer": "https://x-minus.pro/",
-        "Origin": "https://x-minus.pro",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Cache-Control": "no-cache",
-      },
-    });
+    // Устанавливаем User-Agent и другие заголовки
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+    );
 
-    res.set(response.headers);
-    res.status(response.status).send(response.data);
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+
+    // Извлекаем содержимое страницы
+    const content = await page.content();
+    res.send(content);
+
+    await browser.close();
   } catch (error) {
-    console.error("Error during proxying:", error.message);
-    res.status(error.response?.status || 500).send(error.response?.data || "Error while proxying the request.");
+    console.error("Error during Puppeteer request:", error.message);
+    res.status(500).send("Error while fetching the page.");
   }
 });
 
